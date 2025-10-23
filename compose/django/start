@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+echo "🚀 INICIANDO MODO PRODUÇÃO"
+
+# Aguarda PostgreSQL
+echo "Aguardando PostgreSQL..."
+while ! nc -z db 5432; do
+  sleep 1
+done
+echo "✅ PostgreSQL pronto!"
+
+# Aguarda Redis
+echo "Aguardando Redis..."
+while ! nc -z redis 6379; do
+  sleep 1
+done
+echo "✅ Redis pronto!"
+
+python manage.py migrate --noinput
+
+# ✅ CORREÇÃO: Só fazer collectstatic se o diretório estiver vazio
+if [ -z "$(ls -A /app/staticfiles)" ]; then
+    echo "📦 Coletando arquivos estáticos..."
+    python manage.py collectstatic --noinput
+else
+    echo "📦 Arquivos estáticos já coletados"
+fi
+
+echo "🚀 Servidor Gunicorn iniciando..."
+exec gunicorn --bind 0.0.0.0:8000 config.wsgi:application

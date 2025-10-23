@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+echo "🔧 INICIANDO MODO DESENVOLVIMENTO" 
+echo "📊 Banco: SQLite"
+echo "🐛 Debug: LIGADO"
+
+# ✅ Em dev, não precisa aguardar PostgreSQL/Redis
+# ✅ Em dev, NÃO fazer collectstatic (causa problemas de permissão)
+
+python manage.py migrate --noinput
+
+echo "🔄 Servidor de desenvolvimento com auto-reload..."
+exec python manage.py runserver 0.0.0.0:8000
