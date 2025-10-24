@@ -1,4 +1,15 @@
 #!/bin/bash
 set -e
 
+echo "👷 Iniciando Celery Worker..."
+echo "📊 DJANGO_ENV: ${DJANGO_ENV:-production}"
+
+# Aguarda o Redis estar disponível
+echo "⏳ Aguardando Redis..."
+until nc -z redis 6379; do
+    echo "Redis não disponível ainda - aguardando..."
+    sleep 1
+done
+echo "✅ Redis disponível!"
+
 exec celery -A core worker -l info

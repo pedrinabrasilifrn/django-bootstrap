@@ -1,4 +1,19 @@
 #!/bin/bash
 set -e
 
+echo "⏰ Iniciando Celery Beat..."
+echo "📊 DJANGO_ENV: ${DJANGO_ENV:-production}"
+
+# Aguarda o Redis estar disponível
+echo "⏳ Aguardando Redis..."
+until nc -z redis 6379; do
+    echo "Redis não disponível ainda - aguardando..."
+    sleep 1
+done
+echo "✅ Redis disponível!"
+
+# Aguarda o serviço web estar pronto (para garantir que as migrações foram executadas)
+echo "⏳ Aguardando serviço web..."
+sleep 5
+
 exec celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler

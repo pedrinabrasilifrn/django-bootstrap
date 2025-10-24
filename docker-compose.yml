@@ -1,71 +1,44 @@
+# docker compose for development
+x-common-django: &common-django
+  build: .
+  volumes:
+    - .:/app
+    - staticfiles:/app/staticfiles
+    - media:/app/media
+  env_file:
+    - .env
+  depends_on:
+    - redis
+
 services:
   web:
-    build: .
-    command: /start
-    volumes:
-      - staticfiles:/app/staticfiles
-      - media:/app/media
-    expose:
-      - 8000
-    env_file:
-      - .env
-    depends_on:
-      - db
-      - redis
-
-  db:
-    image: postgres:13
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    <<: *common-django
+    command: /start-dev
+    ports:
+      - "8000:8000"
 
   redis:
     image: redis:7-alpine
     volumes:
       - redis_data:/data
+    ports:
+      - "6379:6379"
 
   celery_worker:
-    build: .
+    <<: *common-django
     command: /start-celeryworker
-    volumes:
-      - staticfiles:/app/staticfiles
-      - media:/app/media
-    env_file:
-      - .env
     depends_on:
       - redis
-      - db
       - web
 
   celery_beat:
-    build: .
+    <<: *common-django
     command: /start-celerybeat
-    volumes:
-      - staticfiles:/app/staticfiles
-      - media:/app/media
-    env_file:
-      - .env
     depends_on:
       - redis
-      - db
-      - web
-
-  nginx:
-    image: nginx:1.21
-    volumes:
-      - staticfiles:/app/staticfiles
-      - media:/app/media
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-    ports:
-      - "80:80"
-    depends_on:
       - web
 
 volumes:
-  postgres_data:
   redis_data:
   staticfiles:
   media:
