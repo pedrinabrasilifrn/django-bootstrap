@@ -16,7 +16,7 @@ db.sqlite3-journal
 
 # Environment
 .env
-.env.dev
+.env.prd
 
 # Docker
 .dockerignore

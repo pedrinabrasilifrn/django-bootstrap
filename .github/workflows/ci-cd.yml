@@ -4,12 +4,10 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    types: [ closed ]
     branches: [ main ]
 
 jobs:
   test:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     
     services:
@@ -37,9 +35,10 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
+        cache: 'pip'
 
     - name: Install dependencies
       run: |
@@ -48,18 +47,22 @@ jobs:
 
     - name: Run migrations and tests
       env:
-        DEBUG: 0
-        SECRET_KEY: test-secret-key-for-ci-cd
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        DEBUG: "False"
+        SECRET_KEY: test-secret-key-for-ci-cd-pipeline
+        POSTGRES_DB: test_db
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432
         CELERY_BROKER_URL: redis://localhost:6379/0
         CELERY_RESULT_BACKEND: redis://localhost:6379/0
       run: |
-        python manage.py migrate
+        python manage.py migrate --noinput
         python manage.py test
         python manage.py check --deploy
 
   deploy:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     needs: test
     
@@ -74,6 +77,8 @@ jobs:
         username: ${{ secrets.SERVER_USERNAME }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
+          set -e
+          
           echo "🚀 INICIANDO DEPLOY AUTOMÁTICO..."
           
           cd /opt/django-bootstrap
@@ -82,26 +87,34 @@ jobs:
           echo "📥 Atualizando código..."
           git pull origin main
           
-          # Build das imagens localmente
-          echo "🐳 Build das imagens Docker..."
-          docker-compose build --no-cache
+          # Build das imagens usando arquivo de produção
+          echo "🐳 Build das imagens Docker (produção)..."
+          docker compose -f docker-compose.prd.yml build --no-cache
           
           # Parar e recriar os containers
           echo "🔄 Reiniciando containers..."
-          docker-compose down
-          docker-compose up -d
+          docker compose -f docker-compose.prd.yml down
+          docker compose -f docker-compose.prd.yml up -d
+          
+          # Aguardar serviços iniciarem
+          echo "⏳ Aguardando serviços iniciarem..."
+          sleep 10
           
           # Executar migrações
           echo "🗃️ Executando migrações..."
-          docker-compose exec -T web python manage.py migrate --noinput
+          docker compose -f docker-compose.prd.yml exec -T web python manage.py migrate --noinput
           
           # Coletar static files
           echo "📦 Coletando arquivos estáticos..."
-          docker-compose exec -T web python manage.py collectstatic --noinput
+          docker compose -f docker-compose.prd.yml exec -T web python manage.py collectstatic --noinput --clear
           
           # Verificar se os serviços estão rodando
           echo "✅ Verificando serviços..."
-          docker-compose ps
+          docker compose -f docker-compose.prd.yml ps
+          
+          # Verificar logs recentes
+          echo "📋 Logs recentes do serviço web:"
+          docker compose -f docker-compose.prd.yml logs --tail=20 web
           
           echo "🎉 DEPLOY CONCLUÍDO COM SUCESSO!"
           echo "🌐 Acesse: http://${{ secrets.SERVER_HOST }}"
