@@ -5,7 +5,7 @@ echo "🚀 INICIANDO MODO PRODUÇÃO"
 
 # Aguarda PostgreSQL
 echo "Aguardando PostgreSQL..."
-while ! nc -z db 5432; do
+while ! nc -z postgres 5432; do
   sleep 1
 done
 echo "✅ PostgreSQL pronto!"
@@ -28,4 +28,4 @@ else
 fi
 
 echo "🚀 Servidor Gunicorn iniciando..."
-exec gunicorn --bind 0.0.0.0:8000 config.wsgi:application
+exec gunicorn --bind 0.0.0.0:8000 settings.wsgi:application

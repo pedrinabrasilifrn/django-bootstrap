@@ -5,7 +5,7 @@ x-common-django: &common-django
     - staticfiles:/app/staticfiles
     - media:/app/media
   env_file:
-    - .env.prd
+    - .env
   depends_on:
     - postgres
     - redis
@@ -18,13 +18,18 @@ services:
       - 8000
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   postgres:
-    image: postgres:13
+    image: postgres:14
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     env_file:
-      - .env.prd
+      - .env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -46,6 +51,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+
 
   celery_beat:
     <<: *common-django

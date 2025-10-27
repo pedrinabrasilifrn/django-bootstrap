@@ -5,12 +5,4 @@ echo "🚀 Iniciando entrypoint..."
 echo "📊 DJANGO_ENV: ${DJANGO_ENV:-production}"
 echo "🐛 DEBUG: ${DEBUG:-False}"
 
-# Apenas executa migrate se não for um worker do Celery
-if [[ "$1" != *"celery"* ]]; then
-    echo "🔄 Executando migrações..."
-    python manage.py migrate --noinput
-else
-    echo "⏭️  Pulando migrações (Celery worker/beat)"
-fi
-
 exec "$@"

@@ -13,13 +13,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+from celery.schedules import crontab
+from dotenv import find_dotenv, load_dotenv
+
+load_dotenv(find_dotenv())
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
@@ -30,14 +30,15 @@ DJANGO_ENV = os.environ.get("DJANGO_ENV", "development")
 
 # Application definition
 DJANGO_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.forms",
+    "django.contrib.admin",
 ]
+
 THIRD_PARTY_APPS = [
     "django_celery_beat",
     "django_select2",
@@ -57,8 +58,8 @@ THIRD_PARTY_APPS = [
 
 MY_APPS = [
     "core",
-    "public",
     "accounts",
+    "public",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + MY_APPS
@@ -105,7 +106,7 @@ else:  # Produção - PostgreSQL
             "NAME": os.getenv("POSTGRES_DB"),
             "USER": os.getenv("POSTGRES_USER"),
             "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-            "HOST": os.getenv("POSTGRES_HOST", "db"),
+            "HOST": os.getenv("POSTGRES_HOST", "postgres"),
             "PORT": os.getenv("POSTGRES_PORT", "5432"),
         }
     }
@@ -163,10 +164,27 @@ LOGOUT_REDIRECT_URL = "/"
 # Configurações do Celery
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_RESULT_EXTENDED = True
+CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
+CELERY_RESULT_BACKEND_MAX_RETRIES = 10
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = "America/Sao_Paulo"
+CELERY_TASK_TIME_LIMIT = 5 * 60
+CELERY_TASK_SOFT_TIME_LIMIT = 60
+CELERY_WORKER_SEND_TASK_EVENTS = True
+CELERY_TASK_SEND_SENT_EVENT = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_BEAT_SCHEDULE = {
+    "todo-dia-meia-noite": {
+        "task": "core.tasks.todo_dia_meia_noite",
+        "schedule": crontab(minute=0, hour=0),  # Executa todo dia à meia-noite
+    }
+}
+
+X_FRAME_OPTIONS = "SAMEORIGIN"
 
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
@@ -176,3 +194,26 @@ CRISPY_TEMPLATE_PACK = "tailwind"
 
 # Custom User Model
 AUTH_USER_MODEL = "accounts.User"
+
+
+AUTHENTICATION_BACKENDS = (
+    "rules.permissions.ObjectPermissionBackend",
+    "django.contrib.auth.backends.ModelBackend",
+)
+
+REDIS_URL = os.getenv("REDIS_URL", os.getenv("CELERY_BROKER_URL", "redis://redis:6379"))
+
+if DJANGO_ENV != "development":
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": f"{REDIS_URL}/1",
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        },
+        "select2": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": f"{REDIS_URL}/2",
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        },
+    }
+    SELECT2_CACHE_BACKEND = "select2"

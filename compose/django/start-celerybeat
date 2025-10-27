@@ -6,14 +6,16 @@ echo "📊 DJANGO_ENV: ${DJANGO_ENV:-production}"
 
 # Aguarda o Redis estar disponível
 echo "⏳ Aguardando Redis..."
-until nc -z redis 6379; do
+until (echo > /dev/tcp/redis/6379) >/dev/null 2>&1; do
     echo "Redis não disponível ainda - aguardando..."
     sleep 1
 done
 echo "✅ Redis disponível!"
 
-# Aguarda o serviço web estar pronto (para garantir que as migrações foram executadas)
-echo "⏳ Aguardando serviço web..."
+# Aguarda o serviço web (pequeno atraso opcional)
+echo "⏳ Aguardando serviço web inicializar..."
 sleep 5
 
+# Inicia o Celery Beat
+echo "🚀 Iniciando Celery Beat com scheduler do Django..."
 exec celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
