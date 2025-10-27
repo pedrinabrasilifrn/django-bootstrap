@@ -14,8 +14,8 @@ services:
   web:
     <<: *common-django
     command: /start
-    expose:
-      - 8000
+    ports:
+      - "8000:8000"
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     depends_on:
