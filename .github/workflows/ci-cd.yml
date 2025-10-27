@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:13
@@ -24,7 +24,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      
+
       redis:
         image: redis:7-alpine
         ports:
@@ -65,7 +65,7 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     needs: test
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -78,43 +78,43 @@ jobs:
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
           set -e
-          
+
           echo "🚀 INICIANDO DEPLOY AUTOMÁTICO..."
-          
+
           cd /opt/django-bootstrap
-          
+
           # Pull do código mais recente
           echo "📥 Atualizando código..."
           git pull origin main
-          
+
           # Build das imagens usando arquivo de produção
           echo "🐳 Build das imagens Docker (produção)..."
           docker compose -f docker-compose.prd.yml build --no-cache
-          
+
           # Parar e recriar os containers
           echo "🔄 Reiniciando containers..."
           docker compose -f docker-compose.prd.yml down
           docker compose -f docker-compose.prd.yml up -d
-          
+
           # Aguardar serviços iniciarem
           echo "⏳ Aguardando serviços iniciarem..."
           sleep 10
-          
+
           # Executar migrações
           echo "🗃️ Executando migrações..."
           docker compose -f docker-compose.prd.yml exec -T web python manage.py migrate --noinput
-          
+
           # Coletar static files
           echo "📦 Coletando arquivos estáticos..."
           docker compose -f docker-compose.prd.yml exec -T web python manage.py collectstatic --noinput --clear
-          
+
           # Verificar se os serviços estão rodando
           echo "✅ Verificando serviços..."
           docker compose -f docker-compose.prd.yml ps
-          
+
           # Verificar logs recentes
           echo "📋 Logs recentes do serviço web:"
           docker compose -f docker-compose.prd.yml logs --tail=20 web
-          
+
           echo "🎉 DEPLOY CONCLUÍDO COM SUCESSO!"
           echo "🌐 Acesse: http://${{ secrets.SERVER_HOST }}"
