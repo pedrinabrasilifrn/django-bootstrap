@@ -10,7 +10,7 @@ from core.utils import FormatStringFileUpload
 
 class UserRole(models.TextChoices):
     SUPERADMIN = "Superadmin", "Superadmin"
-    ADMIN = "Servidor IFRN", "Servidor IFRN"
+    ADMIN = "Admin", "Administrador"
     COMMON = "Comum", "Comum"
 
 
