@@ -29,22 +29,39 @@ WSGI_APPLICATION = "settings.wsgi.application"
 DJANGO_ENV = os.environ.get("DJANGO_ENV", "development")
 
 # Application definition
-INSTALLED_APPS = [
+DJANGO_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Third party apps
+    "django.forms",
+]
+THIRD_PARTY_APPS = [
     "django_celery_beat",
+    "django_select2",
+    "django_tables2",
+    "django_filters",
     "crispy_forms",
     "crispy_tailwind",
-    # My apps
+    "simple_menu",
+    "django_htmx",
+    "djangoformsetjs",
+    "rules",
+    "validate_docbr",
+    "formtools",
+    "multiselectfield",
+    "imagekit",
+]
+
+MY_APPS = [
     "core",
     "public",
-    "users",
+    "accounts",
 ]
+
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + MY_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -55,6 +72,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django_htmx.middleware.HtmxMiddleware",
 ]
 
 
@@ -154,3 +172,7 @@ CELERY_TIMEZONE = "America/Sao_Paulo"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
 
 CRISPY_TEMPLATE_PACK = "tailwind"
+
+
+# Custom User Model
+AUTH_USER_MODEL = "accounts.User"
